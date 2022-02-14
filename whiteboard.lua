@@ -1,11 +1,11 @@
 --[[
     OBS Whiteboard
-    v1.0 by Mike Welsh and contributors
+    v1.1 by Mike Welsh and contributors
     MIT License (see LICENSE.md for details)
     https://github.com/Herschel/obs-whiteboard
 --]]
 
-version     = "1.0"
+version     = "1.1"
 obs         = obslua
 hotkey_id   = obs.OBS_INVALID_HOTKEY_ID
 texture 	= nil
