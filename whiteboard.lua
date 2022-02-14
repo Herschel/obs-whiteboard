@@ -116,7 +116,7 @@ source_def.video_tick = function(data, dt)
         local window = winapi.GetForegroundWindow()
         local window_name = winapi.WCS(32)
         winapi.InternalGetWindowText(window, window_name)
-        if winapi.mbs(window_name) == "Fullscreen Projector (Preview)" or winapi.mbs(window_name) == "Windowed Projector (Preview)" then
+        if string.find(winapi.mbs(window_name), "Projector") then
             winapi.ScreenToClient(window, mouse_pos)
 
             local window_rect = winapi.GetClientRect(window)
