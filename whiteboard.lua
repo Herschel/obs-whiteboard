@@ -36,15 +36,12 @@ source_def.create = function(source, settings)
     data.line = obs.gs_image_file()
     data.cap = obs.gs_image_file()
     data.mouse_pos = nil
+    data.canvas_width = 0
+    data.canvas_height = 0
     blank = true
 
     image_source_load(data.line, script_path() .. "assets/line.png")
     image_source_load(data.cap, script_path() .. "assets/cap.png")
-
-    obs.obs_enter_graphics()
-    data.texture = obs.gs_texture_create(1920, 1080, obs.GS_RGBA, 1, nil, obs.GS_RENDER_TARGET)
-    texture = data.texture
-    obs.obs_leave_graphics()
 
     return data
 end
@@ -84,14 +81,41 @@ function script_save(settings)
 	obs.obs_data_array_release(hotkey_save_array)
 end
 
+function create_canvas_texture(data, width, height)
+    obs.obs_enter_graphics()
+    if texture then
+        obs.gs_texture_destroy(data.texture)
+        texture = nil
+    end
+    texture = obs.gs_texture_create(width, height, obs.GS_RGBA, 1, nil, obs.GS_RENDER_TARGET)
+    data.texture = texture
+    data.canvas_width = width
+    data.canvas_height = height
+    print("Created new whiteboard canvas (" .. width .. "x" .. height .. ")")
+
+    obs.obs_leave_graphics()
+end
+
 source_def.video_tick = function(data, dt)
+    -- Check for canvas resized
+    local video_info = obs.obs_video_info()
+    if obs.obs_get_video_info(video_info) and
+        (not data.texture or data.canvas_width ~= video_info.base_width or data.canvas_height ~= video_info.base_height)
+    then
+        create_canvas_texture(data, video_info.base_width, video_info.base_height)
+    end
+
+    if not data.texture or data.canvas_width == 0 or data.canvas_height == 0 then
+        return
+    end
+
 	if needs_clear then
 		local prev_render_target = obs.gs_get_render_target()
 	    local prev_zstencil_target = obs.gs_get_zstencil_target()
 
 	    obs.gs_set_render_target(texture, nil)
 	    obs.gs_viewport_push()
-	    obs.gs_set_viewport(0, 0, 1920, 1080)
+	    obs.gs_set_viewport(0, 0, data.canvas_width, data.canvas_height)
 
 	    obs.obs_enter_graphics()
 	    obs.gs_set_render_target(texture, nil)
@@ -121,26 +145,26 @@ source_def.video_tick = function(data, dt)
 
             local window_rect = winapi.GetClientRect(window)
             
-            local output_width = 1920
-            local output_height = 1080
-            local output_aspect = output_width / output_height
+            local canvas_width = data.canvas_width
+            local canvas_height = data.canvas_height
+            local canvas_aspect = canvas_width / canvas_height
 
             local window_width = window_rect.right - window_rect.left
             local window_height = window_rect.bottom - window_rect.top
             local window_aspect = window_width / window_height
             local offset_x = 0
             local offset_y = 0
-            if window_aspect >= output_aspect then
-                offset_x = (window_width - window_height * output_aspect) / 2
+            if window_aspect >= canvas_aspect then
+                offset_x = (window_width - window_height * canvas_aspect) / 2
             else
-                offset_y = (window_height - window_width / output_aspect) / 2
+                offset_y = (window_height - window_width / canvas_aspect) / 2
             end
 
-            mouse_pos.x = output_width * (mouse_pos.x - offset_x) / (window_width - offset_x*2)
-            mouse_pos.y = output_height * (mouse_pos.y - offset_y) / (window_height - offset_y*2)
+            mouse_pos.x = canvas_width * (mouse_pos.x - offset_x) / (window_width - offset_x*2)
+            mouse_pos.y = canvas_height * (mouse_pos.y - offset_y) / (window_height - offset_y*2)
             
-            if (mouse_pos.x >= 0 and mouse_pos.x < output_width and mouse_pos.y >= 0 and mouse_pos.y < output_height)
-                or (data.mouse_pos.x >= 0 and data.mouse_pos.x < output_width and data.mouse_pos.y >= 0 and data.mouse_pos.y < output_height)
+            if (mouse_pos.x >= 0 and mouse_pos.x < canvas_width and mouse_pos.y >= 0 and mouse_pos.y < canvas_height)
+                or (data.mouse_pos.x >= 0 and data.mouse_pos.x < canvas_width and data.mouse_pos.y >= 0 and data.mouse_pos.y < canvas_height)
                 then
                 effect = obs.obs_get_base_effect(obs.OBS_EFFECT_DEFAULT)
                 if not effect then
@@ -154,9 +178,9 @@ source_def.video_tick = function(data, dt)
 
                 obs.gs_set_render_target(data.texture, nil)
                 obs.gs_viewport_push()
-                obs.gs_set_viewport(0, 0, 1920, 1080)
+                obs.gs_set_viewport(0, 0, canvas_width, canvas_height)
                 obs.gs_projection_push()
-                obs.gs_ortho(0, 1920, 0, 1080, 0.0, 1.0)
+                obs.gs_ortho(0, canvas_width, 0, canvas_height, 0.0, 1.0)
 
                 obs.gs_blend_state_push()
                 obs.gs_reset_blend_state()
