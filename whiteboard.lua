@@ -5,7 +5,7 @@
     https://github.com/Herschel/obs-whiteboard
 --]]
 
-version     = "1.2"
+version     = "1.3"
 obs         = obslua
 hotkey_id   = obs.OBS_INVALID_HOTKEY_ID
 texture 	= nil
@@ -33,8 +33,8 @@ end
 
 source_def.create = function(source, settings)
     local data = {}
-    data.line = obs.gs_image_file()
-    data.cap = obs.gs_image_file()
+    data.line = obs.gs_image_file_ex()
+    data.cap = obs.gs_image_file_ex()
     data.mouse_pos = nil
     data.canvas_width = 0
     data.canvas_height = 0
@@ -48,8 +48,8 @@ end
 
 source_def.destroy = function(data)
     obs.obs_enter_graphics()
-    obs.gs_image_file_free(data.line)
-    obs.gs_image_file_free(data.cap)
+    obs.gs_image_file_ex_free(data.line)
+    obs.gs_image_file_ex_free(data.cap)
     obs.gs_texture_destroy(data.texture)
     texture = nil
     obs.obs_leave_graphics()
@@ -245,13 +245,13 @@ end
 
 function image_source_load(image, file)
     obs.obs_enter_graphics()
-    obs.gs_image_file_free(image);
+    obs.gs_image_file_ex_free(image);
     obs.obs_leave_graphics()
 
-    obs.gs_image_file_init(image, file);
+    obs.gs_image_file_ex_init(image, file, obs.GS_IMAGE_ALPHA_STRAIGHT);
 
     obs.obs_enter_graphics()
-    obs.gs_image_file_init_texture(image);
+    obs.gs_image_file_ex_init_texture(image);
     obs.obs_leave_graphics()
 
     if not image.loaded then
